@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoDrop - Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .player-container {
+            aspect-ratio: 16/9;
+        }
+        .back-button {
+            transition: transform 0.2s ease;
+        }
+        .back-button:hover {
+            transform: translateX(-4px);
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-900 text-white">
+    <div class="container mx-auto px-4 py-6">
+        <div class="mb-4">
+            <a href="gallery.html" class="back-button inline-flex items-center text-gray-300 hover:text-white">
+                <i class="fas fa-arrow-left mr-2"></i>
+                <span>Back to Gallery</span>
+            </a>
+        </div>
+
+        <div id="playerWrapper" class="player-container w-full bg-black rounded-lg overflow-hidden shadow-xl">
+            <video id="videoPlayer" controls class="w-full h-full">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <div id="videoInfo" class="mt-6 p-4 bg-gray-800 rounded-lg">
+            <h1 id="videoTitle" class="text-2xl font-bold mb-2 truncate">Loading...</h1>
+            <div class="flex justify-between text-gray-400">
+                <span id="videoSize"></span>
+                <span id="videoDate"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('id');
+            const videoPlayer = document.getElementById('videoPlayer');
+            const videoTitle = document.getElementById('videoTitle');
+            const videoSize = document.getElementById('videoSize');
+            const videoDate = document.getElementById('videoDate');
+
+            if (!videoId) {
+                showError('No video specified');
+                return;
+            }
+
+            const videos = JSON.parse(localStorage.getItem('videos') || '[]');
+            const video = videos.find(v => v.id == videoId);
+
+            if (!video) {
+                showError('Video not found');
+                return;
+            }
+
+            // Reconstruct video from stored binary data
+            const uint8Array = new Uint8Array(video.data);
+            const blob = new Blob([uint8Array], {type: video.type});
+            videoPlayer.src = URL.createObjectURL(blob);
+            videoPlayer.poster = video.thumbnail;
+            videoPlayer.load();
+            
+            // Clean up when done
+            videoPlayer.addEventListener('ended', () => {
+                URL.revokeObjectURL(videoPlayer.src);
+            });
+
+            // Set video info
+            videoTitle.textContent = video.name;
+            videoSize.textContent = formatFileSize(video.size);
+            videoDate.textContent = formatDate(video.timestamp);
+
+            // Auto play if supported
+            videoPlayer.load(); // Ensure video is properly loaded
+            videoPlayer.play().catch(e => {
+                console.log('Autoplay prevented:', e);
+                // Show play button if autoplay fails
+                videoPlayer.controls = true;
+            });
+
+            // Ensure video element has controls
+            videoPlayer.controls = true;
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function showError(message) {
+            const playerWrapper = document.getElementById('playerWrapper');
+            playerWrapper.innerHTML = `
+                <div class="w-full h-full flex flex-col items-center justify-center bg-red-900 bg-opacity-50 text-red-100 p-8 text-center">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                    <h2 class="text-xl font-bold mb-2">Error</h2>
+                    <p>${message}</p>
+                    <a href="gallery.html" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md">
+                        Back to Gallery
+                    </a>
+                </div>
+            `;
+        }
+    function dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1];
+        var bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        for (var i = 0; i < n; i++) {
+            u8arr[i] = bstr.charCodeAt(i);
+        }
+        return new Blob([u8arr], {type: mime});
+    }
+    </script>
+</body>
+</html>
