@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoDrop - Your Videos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .video-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .empty-state {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Your Videos</h1>
+                <p class="text-gray-600" id="videoCount">0 videos</p>
+            </div>
+            <a href="index.html" class="flex items-center space-x-2 text-blue-500 hover:text-blue-600">
+                <i class="fas fa-plus"></i>
+                <span>Add Video</span>
+            </a>
+        </header>
+
+        <div id="videoGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Videos will be inserted here -->
+        </div>
+
+        <div id="emptyState" class="empty-state text-center py-20 hidden">
+            <i class="fas fa-film text-5xl text-gray-300 mb-4"></i>
+            <h2 class="text-xl font-medium text-gray-500 mb-2">No videos yet</h2>
+            <p class="text-gray-400 mb-4">Upload your first video to get started</p>
+            <a href="index.html" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                <i class="fas fa-cloud-upload-alt mr-2"></i>
+                Upload Video
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const videos = JSON.parse(localStorage.getItem('videos') || '[]');
+            const videoGrid = document.getElementById('videoGrid');
+            const emptyState = document.getElementById('emptyState');
+            const videoCount = document.getElementById('videoCount');
+
+            // Update video count
+            videoCount.textContent = `${videos.length} ${videos.length === 1 ? 'video' : 'videos'}`;
+
+            if (videos.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            // Display videos
+            videos.forEach(video => {
+                const videoCard = document.createElement('div');
+                videoCard.className = 'video-card bg-white rounded-lg overflow-hidden shadow-md';
+                videoCard.innerHTML = `
+                    <div class="relative">
+                        <img src="${video.thumbnail}" alt="${video.name}" class="w-full h-48 object-cover">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity">
+                            <div class="w-16 h-16 bg-white bg-opacity-80 rounded-full flex items-center justify-center">
+                                <i class="fas fa-play text-blue-500 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium text-gray-800 truncate">${video.name}</h3>
+                        <div class="flex justify-between items-center mt-2 text-sm text-gray-500">
+                            <span>${formatFileSize(video.size)}</span>
+                            <span>${formatDate(video.timestamp)}</span>
+                        </div>
+                    </div>
+                `;
+                videoCard.addEventListener('click', () => {
+                    if (!navigator.onLine) {
+                        alert('Note: Playing in offline mode');
+                    }
+                    // Store the selected video in sessionStorage for immediate access
+                    sessionStorage.setItem('currentVideo', JSON.stringify(video));
+                    window.location.href = `player.html?id=${video.id}`;
+                });
+                videoGrid.appendChild(videoCard);
+            });
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+    </script>
+</body>
+</html>
